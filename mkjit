@@ -1,0 +1,33 @@
+#!/usr/bin/bash
+
+set -euo pipefail
+
+if [ $# -ne 1 ]; then
+    echo "Usage: mkjit prog" 1>&2
+    echo "" 1>&2
+    exit 1
+fi
+
+prog_name=$(basename "$1")
+real_path=$(realpath "$1")
+in_file="$real_path.c"
+out_file="$real_path-jit"
+
+echo "#!/usr/bin/bash
+set -eu
+" > "$prog_name"
+
+cat >>"$prog_name" <<EOT
+in_file="$in_file"
+out_file="$out_file"
+EOT
+
+echo '
+if [[ "$in_file" -nt "$out_file" ]] || ! [[ -x "$out_file" ]]; then
+    gcc "$in_file" -o "$out_file"
+fi;
+
+"$out_file" $@
+' >> "$prog_name"
+
+chmod u+x "$prog_name"
